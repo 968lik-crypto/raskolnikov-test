@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Рабочий лист: Сны Раскольникова (Интерактив)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; user-select: none; }
+        .step-content { display: none; }
+        .step-content.active { display: block; }
+        .dot.active { background-color: #4f46e5; transform: scale(1.2); }
+        .dot.completed { background-color: #10b981; }
+        .option-card.selected { border-color: #4f46e5; background-color: #eef2ff; }
+        textarea, input { user-select: text; }
+        /* Анимация предупреждения */
+        @keyframes slideIn { from { transform: translateY(-100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .warning-toast { animation: slideIn 0.5s ease out; }
+    </style>
+</head>
+<body class="text-slate-800 antialiased" oncontextmenu="return false;">
+
+    <!-- Предупреждение о переключении -->
+    <div id="cheat-warning" class="fixed top-4 left-1/2 -translate-x-1/2 z-[100] hidden w-full max-w-sm px-4 warning-toast">
+        <div class="bg-rose-600 text-white p-4 rounded-2xl shadow-2xl flex items-center gap-3 border-2 border-rose-400">
+            <svg class="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <div>
+                <p class="font-bold">Внимание!</p>
+                <p class="text-xs">Переключение вкладок запрещено. Данное действие зафиксировано в отчете для учителя.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-3xl mx-auto my-8 px-4">
+        <!-- Header & Stepper -->
+        <div class="bg-white rounded-2xl shadow-sm p-6 mb-6 border border-slate-200">
+            <div class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-2xl font-bold text-indigo-900 mb-2">Сны как зеркало души Родиона Раскольникова</h1>
+                    <p class="text-sm text-slate-500 mb-6">Анализ романа «Преступление и наказание» • 10 "А" класс</p>
+                </div>
+                <div class="bg-amber-50 text-amber-700 p-2 rounded-lg text-[10px] font-bold uppercase border border-amber-200">
+                    Академическая честность: ON
+                </div>
+            </div>
+            
+            <div id="stepper-dots" class="flex justify-between items-center px-4 mb-2"></div>
+            <div class="w-full bg-slate-100 h-1 rounded-full overflow-hidden">
+                <div id="progress-bar" class="bg-indigo-600 h-full transition-all duration-500" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <main id="main-container" class="bg-white rounded-2xl shadow-sm border border-slate-200 min-h-[450px] relative overflow-hidden">
+            
+            <!-- Step 0: Registration -->
+            <div class="step-content active p-8" data-step="0">
+                <h2 class="text-xl font-semibold mb-6 text-indigo-800">Регистрация и выбор варианта</h2>
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Ф.И.О. ученика</label>
+                        <input type="text" id="student_name" placeholder="Введите полное имя" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Email для обратной связи</label>
+                        <input type="email" id="student_email" placeholder="example@mail.com" class="w-full p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase mb-3 text-rose-600">Важно: Вставка скопированного текста запрещена!</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div onclick="selectVariant(1)" id="var-1-card" class="option-card cursor-pointer p-4 border-2 border-slate-200 rounded-xl text-center hover:border-indigo-300 transition-all">
+                                <span class="block font-bold text-lg">Вариант 1</span>
+                                <span class="text-xs text-slate-500 text-center">Сон о кляче (Ч. 1, Гл. 5) и трихинах (Эпилог)</span>
+                            </div>
+                            <div onclick="selectVariant(2)" id="var-2-card" class="option-card cursor-pointer p-4 border-2 border-slate-200 rounded-xl text-center hover:border-indigo-300 transition-all">
+                                <span class="block font-bold text-lg">Вариант 2</span>
+                                <span class="text-xs text-slate-500 text-center">Сон-греза (Ч. 1, Гл. 6) и психоанализ</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 1: Task A -->
+            <div class="step-content p-8" data-step="1">
+                <h2 class="text-xl font-semibold mb-4 text-indigo-800" id="task-a-title">Задание А</h2>
+                <p class="text-sm text-slate-600 mb-4 italic" id="task-a-desc"></p>
+                <textarea id="task_a_text" maxlength="500" placeholder="Ваш ответ (вводите вручную)..." class="no-paste w-full h-32 p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-slate-50"></textarea>
+                <div class="text-right text-xs text-slate-400 mt-1"><span id="char_count_a">0</span>/500</div>
+            </div>
+
+            <!-- Step 2: Task B -->
+            <div class="step-content p-8" data-step="2">
+                <h2 class="text-xl font-semibold mb-4 text-indigo-800">Задание B: Проверка знаний текста</h2>
+                <p class="text-sm text-slate-600 mb-6" id="task-b-desc"></p>
+                <div class="space-y-6" id="task-b-inputs"></div>
+            </div>
+
+            <!-- Step 3: Task C (Adal Azamat) -->
+            <div class="step-content p-8" data-step="3">
+                <h2 class="text-xl font-semibold mb-4 text-indigo-800">Задание C: Адал азамат (Исследование)</h2>
+                <p class="text-sm text-slate-600 mb-4" id="task-c-desc"></p>
+                <textarea id="task_c_text" maxlength="600" placeholder="Ваши размышления (вводите вручную)..." class="no-paste w-full h-40 p-4 border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none resize-none bg-slate-50"></textarea>
+                <div class="text-right text-xs text-slate-400 mt-1"><span id="char_count_c">0</span>/600</div>
+            </div>
+
+            <!-- Step 4: Cinquain -->
+            <div class="step-content p-8" data-step="4">
+                <h2 class="text-xl font-semibold mb-4 text-indigo-800">Задание D: Синквейн</h2>
+                <p class="text-sm text-slate-600 mb-6">Создайте пятистрочный стих по теме урока.</p>
+                <div class="space-y-3">
+                    <input type="text" id="cq_1" placeholder="1. Одно существительное" class="no-paste w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="cq_2" placeholder="2. Два прилагательных" class="no-paste w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="cq_3" placeholder="3. Три глагола" class="no-paste w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="cq_4" placeholder="4. Фраза из 4-х слов" class="no-paste w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <input type="text" id="cq_5" placeholder="5. Слово-резюме" class="no-paste w-full p-3 border rounded-lg focus:ring-2 focus:ring-indigo-500">
+                </div>
+            </div>
+
+            <!-- Step 5: Quiz -->
+            <div class="step-content p-8" data-step="5">
+                <h2 class="text-xl font-semibold mb-4 text-indigo-800">Итоговый тест (на знание текста романа)</h2>
+                <div id="quiz-container" class="space-y-6 h-[350px] overflow-y-auto pr-2 custom-scrollbar"></div>
+            </div>
+
+        </main>
+
+        <footer class="mt-6 flex justify-between items-center">
+            <button id="prev-btn" class="px-6 py-2 bg-slate-200 text-slate-600 rounded-xl font-medium hover:bg-slate-300 transition-colors hidden">Назад</button>
+            <div class="flex-grow"></div>
+            <button id="next-btn" class="px-6 py-2 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 shadow-md">Далее</button>
+            <button id="finish-btn" class="px-6 py-2 bg-emerald-600 text-white rounded-xl font-medium hover:bg-emerald-700 shadow-md hidden">Завершить и отправить</button>
+        </footer>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal-backdrop" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl text-center">
+            <div class="mb-4 inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-100 text-emerald-600">
+                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-slate-900 mb-2" id="final-title">Работа принята!</h3>
+            <p class="text-slate-500 mb-6" id="modal-msg"></p>
+            <div class="bg-indigo-50 p-5 rounded-2xl mb-6">
+                <p class="text-xs text-indigo-600 font-bold uppercase mb-1">Баллы и оценка</p>
+                <div class="text-4xl font-black text-indigo-900" id="final-score">0 / 13</div>
+                <div class="text-lg font-bold text-indigo-700 mt-1" id="final-grade">Оценка: —</div>
+            </div>
+            <div class="flex flex-col gap-2">
+                <button onclick="generatePDF()" class="w-full py-3 bg-slate-800 text-white rounded-xl font-semibold hover:bg-slate-900 flex items-center justify-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    Скачать отчет (PDF)
+                </button>
+                <p class="text-[10px] text-slate-400 mt-2 italic">Файл сохранен для личного портфолио ученика</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            publicKey: "IfpUEMfj3V70pHaTT",
+            serviceID: "service_acid3zz",
+            templateID: "template_b5sp8aj",
+            teacherEmail: "968lik@gmail.com",
+            quizKeys: ["В", "Б", "А", "В", "А", "В", "А", "А", "В", "В"]
+        };
+
+        const VARIANTS = {
+            1: {
+                taskA: { title: "Сон о кляче (Ч. 1, Гл. 5)", desc: "Выпишите 5 ключевых слов, описывающих чувства маленького Родиона во сне о забитой лошади." },
+                taskB: { desc: "Заполните пропуски по тексту (Ч. 1, Ч. 2, Ч. 3):", keys: ["лошади", "хозяйки", "старухи"], labels: ["1. Сон №1 (Ч. 1, Гл. 5) — Сон о...", "2. Сон №4 (Ч. 2, Гл. 2) — Сон об избиении...", "3. Сон №5 (Ч. 3, Гл. 6) — Сон о повторном убийстве..."] },
+                taskC: { desc: "Анализ сна о «трихинах» (Эпилог). Почему мир гибнет от идеи, когда каждый считает себя «носителем истины»? Свяжите с ответственностью «Адал азамат»." }
+            },
+            2: {
+                taskA: { title: "Сон-греза (Ч. 1, Гл. 6)", desc: "Выпишите ключевые слова, описывающие пейзаж оазиса и состояние Раскольникова в этом сне." },
+                taskB: { desc: "Определите тип сна (греза / кошмар / апокалипсис):", keys: ["греза", "кошмар", "апокалипсис"], labels: ["1. Сон №2 (Египет) — это...", "2. Сон №4 (Избиение хозяйки) — это...", "3. Сон №9 (Трихины) — это..."] },
+                taskC: { desc: "Роль снов в раскрытии души героя. Какая из 4-х ролей (жертва, убийца, свидетель, борец) в 1-м сне (Ч. 1, Гл. 5) соответствует «Адал азамат»?" }
+            }
+        };
+
+        const QUESTIONS = [
+            "1. Возраст Родиона в 1-м сне? (А: 5 лет, Б: 10 лет, В: 7 лет)",
+            "2. Символ «холодной воды» во 2-м сне? (А: Смерть, Б: Покой, В: Страх)",
+            "3. Литературный источник 1-го сна? (А: Некрасов, Б: Пушкин, В: Лермонтов)",
+            "4. Где спряталась старуха в 4-м сне? (А: За дверью, Б: Под кроватью, В: В углу за салопом)",
+            "5. Кто такие «трихины» в Эпилоге? (А: Духи-микробы, Б: Вирусы, В: Тени)",
+            "6. В какой главе описан сон о кляче? (А: Глава 1, Б: Глава 3, В: Глава 5)",
+            "7. Цвет купола церкви во сне? (А: Зеленый, Б: Золотой, В: Синий)",
+            "8. Кто бьет лошадь? (А: Миколка, Б: Отец, В: Пьяница)",
+            "9. Оружие для убийства лошади во сне? (А: Нож, Б: Палка, В: Топор)",
+            "10. К какому виду относится сон об избиении хозяйки? (А: Греза, Б: Пророчество, В: Кошмар)"
+        ];
+
+        let state = {
+            currentStep: 0,
+            variant: 1,
+            name: "",
+            email: "",
+            switches: 0,
+            answers: { taskA: "", taskB: ["", "", ""], taskC: "", cq: ["", "", "", "", ""], quiz: [] }
+        };
+
+        window.onload = () => {
+            emailjs.init(CONFIG.publicKey);
+            renderStepper();
+            renderQuiz();
+            setupSecurity();
+            updateUI();
+        };
+
+        function setupSecurity() {
+            // Запрет вставки (Paste)
+            document.querySelectorAll('.no-paste').forEach(el => {
+                el.addEventListener('paste', (e) => {
+                    e.preventDefault();
+                    showWarning("Вставка текста запрещена! Вводите ответ вручную.");
+                });
+            });
+
+            // Контроль переключения вкладок
+            document.addEventListener("visibilitychange", () => {
+                if (document.hidden) {
+                    state.switches++;
+                } else {
+                    showWarning("Переключение зафиксировано! Соблюдайте академическую честность.");
+                }
+            });
+        }
+
+        function showWarning(msg) {
+            const toast = document.getElementById('cheat-warning');
+            toast.querySelector('p:last-child').innerText = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 4000);
+        }
+
+        function selectVariant(v) {
+            state.variant = v;
+            document.getElementById('var-1-card').classList.toggle('selected', v === 1);
+            document.getElementById('var-2-card').classList.toggle('selected', v === 2);
+            renderVariantContent();
+            validate();
+        }
+
+        function renderVariantContent() {
+            const v = VARIANTS[state.variant];
+            document.getElementById('task-a-title').innerText = v.taskA.title;
+            document.getElementById('task-a-desc').innerText = v.taskA.desc;
+            document.getElementById('task-b-desc').innerText = v.taskB.desc;
+            document.getElementById('task-c-desc').innerText = v.taskC.desc;
+
+            const bContainer = document.getElementById('task-b-inputs');
+            bContainer.innerHTML = v.taskB.labels.map((l, i) => `
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">${l}</label>
+                    <input type="text" oninput="saveB(${i}, this.value)" class="no-paste w-full p-2 border-b-2 border-slate-300 outline-none focus:border-indigo-500">
+                </div>
+            `).join('');
+            
+            // Re-apply security to new inputs
+            setupSecurity();
+        }
+
+        function renderStepper() {
+            const dots = document.getElementById('stepper-dots');
+            dots.innerHTML = Array.from({length: 6}).map((_, i) => `<div class="dot w-3 h-3 rounded-full bg-slate-200" id="dot-${i}"></div>`).join('');
+        }
+
+        function renderQuiz() {
+            const container = document.getElementById('quiz-container');
+            container.innerHTML = QUESTIONS.map((q, i) => `
+                <div class="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <p class="font-medium mb-3">${q}</p>
+                    <div class="flex gap-4">
+                        ${['А', 'Б', 'В'].map(o => `
+                            <label class="flex items-center gap-2 cursor-pointer">
+                                <input type="radio" name="q${i}" value="${o}" onchange="saveQuiz(${i}, '${o}')" class="w-4 h-4 text-indigo-600">
+                                <span class="text-sm font-bold">${o}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function saveB(i, v) { state.answers.taskB[i] = v.trim().toLowerCase(); }
+        function saveQuiz(i, v) { state.answers.quiz[i] = v; }
+
+        function validate() {
+            const nextBtn = document.getElementById('next-btn');
+            if (state.currentStep === 0) {
+                state.name = document.getElementById('student_name').value;
+                state.email = document.getElementById('student_email').value;
+                nextBtn.disabled = state.name.length < 5 || !state.email.includes('@');
+            }
+            nextBtn.classList.toggle('opacity-50', nextBtn.disabled);
+        }
+
+        function updateUI() {
+            document.querySelectorAll('.step-content').forEach((s, i) => s.classList.toggle('active', i === state.currentStep));
+            document.querySelectorAll('.dot').forEach((d, i) => {
+                d.classList.toggle('active', i === state.currentStep);
+                d.classList.toggle('completed', i < state.currentStep);
+            });
+            document.getElementById('progress-bar').style.width = `${(state.currentStep / 5) * 100}%`;
+            document.getElementById('prev-btn').classList.toggle('hidden', state.currentStep === 0);
+            document.getElementById('next-btn').classList.toggle('hidden', state.currentStep === 5);
+            document.getElementById('finish-btn').classList.toggle('hidden', state.currentStep !== 5);
+        }
+
+        document.getElementById('next-btn').onclick = () => { state.currentStep++; updateUI(); };
+        document.getElementById('prev-btn').onclick = () => { state.currentStep--; updateUI(); };
+        document.getElementById('student_name').oninput = validate;
+        document.getElementById('student_email').oninput = validate;
+
+        async function finishWork() {
+            const btn = document.getElementById('finish-btn');
+            btn.innerText = "Обработка...";
+            btn.disabled = true;
+
+            // Update state with final values
+            state.name = document.getElementById('student_name').value;
+            state.email = document.getElementById('student_email').value;
+
+            // Scoring
+            let quizScore = 0;
+            state.answers.quiz.forEach((a, i) => { if(a === CONFIG.quizKeys[i]) quizScore++; });
+            
+            let bScore = 0;
+            const keys = VARIANTS[state.variant].taskB.keys;
+            state.answers.taskB.forEach((a, i) => { if(a && a.includes(keys[i])) bScore++; });
+
+            const total = quizScore + bScore;
+            const grade = total >= 12 ? "5" : total >= 10 ? "4" : total >= 7 ? "3" : "2";
+
+            const quizLog = QUESTIONS.map((q, i) => `${q}\nУченик: ${state.answers.quiz[i] || '—'} (Верно: ${CONFIG.quizKeys[i]})`).join('\n\n');
+            
+            // Включаем email ученика в полный отчет для учителя
+            const fullReport = `
+Ученик: ${state.name}
+Email ученика: ${state.email}
+Класс: 10 А (ЕМН)
+Вариант: ${state.variant}
+Переключений вкладок: ${state.switches}
+Итого баллов: ${total} / 13
+Оценка: ${grade}
+
+--- ЗАДАНИЕ А (Текст) ---
+${document.getElementById('task_a_text').value}
+
+--- ЗАДАНИЕ B (Автопроверка: ${bScore}/3) ---
+Ответы: ${state.answers.taskB.join(' | ')}
+Ключи: ${keys.join(' | ')}
+
+--- ЗАДАНИЕ C (Адал Азамат / Исследование) ---
+${document.getElementById('task_c_text').value}
+
+--- СИНКВЕЙН ---
+1: ${document.getElementById('cq_1').value}
+2: ${document.getElementById('cq_2').value}
+3: ${document.getElementById('cq_3').value}
+4: ${document.getElementById('cq_4').value}
+5: ${document.getElementById('cq_5').value}
+
+--- ТЕСТ (Автопроверка: ${quizScore}/10) ---
+${quizLog}
+            `;
+
+            try {
+                await emailjs.send(CONFIG.serviceID, CONFIG.templateID, {
+                    student_name: state.name,
+                    student_email: state.email, // Передаем как отдельный параметр
+                    full_report: fullReport,   // Передаем внутри текста отчета
+                    teacher_email: CONFIG.teacherEmail
+                });
+                
+                state.finalScore = total;
+                state.finalGrade = grade;
+                showResult(total, grade);
+            } catch (e) {
+                console.error(e);
+                alert("Ошибка связи с сервером. Пожалуйста, сохраните PDF отчета.");
+                showResult(total, grade);
+            }
+        }
+
+        function showResult(s, g) {
+            document.getElementById('modal-backdrop').classList.remove('hidden');
+            document.getElementById('modal-msg').innerText = `Поздравляем, ${state.name}! Работа отправлена учителю. Переключений вкладок зафиксировано: ${state.switches}.`;
+            document.getElementById('final-score').innerText = `${s} / 13`;
+            document.getElementById('final-grade').innerText = `Оценка: ${g}`;
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+        }
+
+        function generatePDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.setFontSize(14);
+            doc.text("ИНТЕРАКТИВНЫЙ ОТЧЕТ ПО ЛИТЕРАТУРЕ", 10, 20);
+            doc.setFontSize(10);
+            doc.text(`ФИ ученика: ${state.name}`, 10, 30);
+            doc.text(`Email ученика: ${state.email}`, 10, 35);
+            doc.text(`Класс: 10 А`, 10, 40);
+            doc.text(`Баллы за автопроверку: ${state.finalScore} / 13`, 10, 45);
+            doc.text(`Нарушений (выходов из вкладки): ${state.switches}`, 10, 50);
+            
+            let y = 65;
+            doc.text("КРАТКИЙ ОБЗОР ОТВЕТОВ:", 10, y);
+            y += 10;
+            doc.text(`Задание А: ${document.getElementById('task_a_text').value.substring(0, 80)}...`, 10, y);
+            y += 10;
+            doc.text(`Синквейн (ключ): ${document.getElementById('cq_5').value}`, 10, y);
+            
+            doc.save(`Literature_Report_10A_${state.name.replace(/\s/g, '_')}.pdf`);
+        }
+
+        document.getElementById('finish-btn').onclick = finishWork;
+        document.getElementById('task_a_text').oninput = e => document.getElementById('char_count_a').innerText = e.target.value.length;
+        document.getElementById('task_c_text').oninput = e => document.getElementById('char_count_c').innerText = e.target.value.length;
+    </script>
+</body>
+</html>
